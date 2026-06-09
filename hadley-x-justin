@@ -1,0 +1,7 @@
+cd ~/Claude/Projects/yumm/hadley-x-justin
+git init
+git add .
+git commit -m "first commit 🧀"
+git branch -M main
+git remote add origin https://github.com/hadleysky-glitch/hadley-x-justin.git
+git push -u origin main
