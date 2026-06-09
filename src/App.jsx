@@ -20,6 +20,7 @@ export default function App() {
   const [flyingItem, setFlyingItem] = useState(null)
   const [incomingMsg, setIncomingMsg] = useState(null)
   const [recentlySent, setRecentlySent] = useState(false)
+  const [rtStatus, setRtStatus] = useState('connecting...')
   const channelRef = useRef(null)
 
   const me = identity ? USERS[identity] : null
@@ -41,7 +42,10 @@ export default function App() {
           if (item) triggerAnimation(item, false)
         }
       })
-      .subscribe()
+      .subscribe((status, err) => {
+        setRtStatus(status)
+        if (err) alert('Realtime error: ' + JSON.stringify(err))
+      })
 
     channelRef.current = channel
     return () => { supabase.removeChannel(channel) }
@@ -166,6 +170,9 @@ export default function App() {
 
       <p className="footer-note">
         {recentlySent ? '✈️ sent!' : `tap to throw something at ${them.name}`}
+      </p>
+      <p style={{ fontSize: '0.7rem', color: '#ccc', marginTop: '0.25rem' }}>
+        realtime: {rtStatus}
       </p>
     </div>
   )
