@@ -119,9 +119,11 @@ export default function App() {
   }
 
   return (
-    <div className="app">
-      <header className="top-bar">
+   <header className="top-bar">
         <span className="title">hadley × justin</span>
+        <span style={{ fontSize: '0.7rem', color: rtStatus === 'SUBSCRIBED' ? 'green' : 'red' }}>
+          {rtStatus}
+        </span>
         <button className="switch-btn" onClick={() => { localStorage.removeItem('hjx_identity'); setIdentity(null) }}>
           switch
         </button>
