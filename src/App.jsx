@@ -17,7 +17,7 @@ const ITEMS = [
 
 export default function App() {
   const [identity, setIdentity] = useState(() => localStorage.getItem('hjx_identity'))
-  const [flyingItem, setFlyingItem] = useState(null) // { item, fromMe }
+  const [flyingItem, setFlyingItem] = useState(null)
   const [incomingMsg, setIncomingMsg] = useState(null)
   const [recentlySent, setRecentlySent] = useState(false)
   const channelRef = useRef(null)
@@ -25,7 +25,6 @@ export default function App() {
   const me = identity ? USERS[identity] : null
   const them = identity === 'hadley' ? USERS.justin : USERS.hadley
 
-  // Subscribe to real-time events
   useEffect(() => {
     if (!identity) return
 
@@ -37,7 +36,6 @@ export default function App() {
         table: 'events',
       }, (payload) => {
         const { from_user, item_id } = payload.new
-        // Only react to events sent by the OTHER person
         if (from_user !== identity) {
           const item = ITEMS.find(i => i.id === item_id)
           if (item) triggerAnimation(item, false)
@@ -65,10 +63,14 @@ export default function App() {
 
     triggerAnimation(item, true)
 
-    await supabase.from('events').insert({
+    const { error } = await supabase.from('events').insert({
       from_user: identity,
       item_id: item.id,
     })
+
+    if (error) {
+      alert('Supabase error: ' + error.message + ' | code: ' + error.code)
+    }
   }
 
   function chooseIdentity(id) {
@@ -76,7 +78,6 @@ export default function App() {
     setIdentity(id)
   }
 
-  // ── Identity picker ──────────────────────────────────────────────
   if (!identity) {
     return (
       <div className="picker-screen">
@@ -95,7 +96,6 @@ export default function App() {
     )
   }
 
-  // ── Main app ─────────────────────────────────────────────────────
   return (
     <div className="app">
       <header className="top-bar">
@@ -106,7 +106,6 @@ export default function App() {
       </header>
 
       <div className="stage">
-        {/* My side */}
         <div className="avatar-panel me">
           <div className="avatar-wrap">
             <img src={me.avatar} alt={me.name} className="avatar" />
@@ -127,7 +126,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* Flying item animation */}
         {flyingItem && (
           <div
             key={flyingItem.key}
@@ -137,7 +135,6 @@ export default function App() {
           </div>
         )}
 
-        {/* Their side */}
         <div className="avatar-panel them">
           <div className="avatar-wrap">
             <img src={them.avatar} alt={them.name} className="avatar" />
