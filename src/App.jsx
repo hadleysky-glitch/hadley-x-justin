@@ -1,10 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
-import { createClient } from '@supabase/supabase-js'
 
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-)
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 const USERS = {
   hadley: { name: 'Hadley', avatar: '/hadley.png', color: '#f9a8d4' },
@@ -15,40 +12,56 @@ const ITEMS = [
   { id: 'cheezit', emoji: '🧀', label: 'Cheez-It', image: '/cheezit.png' },
 ]
 
+function dbFetch(path, options = {}) {
+  return fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    ...options,
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json',
+      ...(options.headers || {}),
+    },
+  })
+}
+
 export default function App() {
   const [identity, setIdentity] = useState(() => localStorage.getItem('hjx_identity'))
   const [flyingItem, setFlyingItem] = useState(null)
   const [incomingMsg, setIncomingMsg] = useState(null)
   const [recentlySent, setRecentlySent] = useState(false)
-  const [rtStatus, setRtStatus] = useState('connecting...')
-  const channelRef = useRef(null)
+  const lastCheckedRef = useRef(null)
 
   const me = identity ? USERS[identity] : null
   const them = identity === 'hadley' ? USERS.justin : USERS.hadley
 
+  // Poll for incoming events every 2 seconds
   useEffect(() => {
     if (!identity) return
 
-    const channel = supabase
-      .channel('items')
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'events',
-      }, (payload) => {
-        const { from_user, item_id } = payload.new
-        if (from_user !== identity) {
-          const item = ITEMS.find(i => i.id === item_id)
-          if (item) triggerAnimation(item, false)
-        }
-      })
-      .subscribe((status, err) => {
-        setRtStatus(status)
-        if (err) alert('Realtime error: ' + JSON.stringify(err))
-      })
+    lastCheckedRef.current = new Date().toISOString()
 
-    channelRef.current = channel
-    return () => { supabase.removeChannel(channel) }
+    const poll = setInterval(async () => {
+      const since = lastCheckedRef.current
+      const now = new Date().toISOString()
+
+      try {
+        const res = await dbFetch(
+          `events?select=*&from_user=neq.${identity}&created_at=gt.${encodeURIComponent(since)}&order=created_at.asc`
+        )
+        if (res.ok) {
+          const rows = await res.json()
+          lastCheckedRef.current = now
+          for (const row of rows) {
+            const item = ITEMS.find(i => i.id === row.item_id)
+            if (item) triggerAnimation(item, false)
+          }
+        }
+      } catch (e) {
+        // silent fail, try again next tick
+      }
+    }, 2000)
+
+    return () => clearInterval(poll)
   }, [identity])
 
   function triggerAnimation(item, fromMe) {
@@ -64,34 +77,20 @@ export default function App() {
     if (recentlySent) return
     setRecentlySent(true)
     setTimeout(() => setRecentlySent(false), 1500)
-
     triggerAnimation(item, true)
 
-    const url = import.meta.env.VITE_SUPABASE_URL
-    const key = import.meta.env.VITE_SUPABASE_ANON_KEY
-
-    if (!url || !key) {
-      alert('Missing env vars!\nURL: ' + url + '\nKEY: ' + (key ? 'present' : 'missing'))
-      return
-    }
-
     try {
-      const res = await fetch(`${url}/rest/v1/events`, {
+      const res = await dbFetch('events', {
         method: 'POST',
-        headers: {
-          'apikey': key,
-          'Authorization': `Bearer ${key}`,
-          'Content-Type': 'application/json',
-          'Prefer': 'return=minimal',
-        },
+        headers: { 'Prefer': 'return=minimal' },
         body: JSON.stringify({ from_user: identity, item_id: item.id }),
       })
       if (!res.ok) {
         const text = await res.text()
-        alert(`Insert failed (${res.status}):\n${text}\n\nURL used: ${url}`)
+        alert(`Send failed (${res.status}): ${text}`)
       }
     } catch (e) {
-      alert('Network error: ' + e.message + '\n\nURL: ' + url)
+      alert('Network error: ' + e.message)
     }
   }
 
@@ -119,11 +118,9 @@ export default function App() {
   }
 
   return (
-   <header className="top-bar">
+    <div className="app">
+      <header className="top-bar">
         <span className="title">hadley × justin</span>
-        <span style={{ fontSize: '0.7rem', color: rtStatus === 'SUBSCRIBED' ? 'green' : 'red' }}>
-          {rtStatus}
-        </span>
         <button className="switch-btn" onClick={() => { localStorage.removeItem('hjx_identity'); setIdentity(null) }}>
           switch
         </button>
@@ -172,9 +169,6 @@ export default function App() {
 
       <p className="footer-note">
         {recentlySent ? '✈️ sent!' : `tap to throw something at ${them.name}`}
-      </p>
-      <p style={{ fontSize: '0.7rem', color: '#ccc', marginTop: '0.25rem' }}>
-        realtime: {rtStatus}
       </p>
     </div>
   )
