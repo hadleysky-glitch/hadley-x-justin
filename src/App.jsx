@@ -63,13 +63,31 @@ export default function App() {
 
     triggerAnimation(item, true)
 
-    const { error } = await supabase.from('events').insert({
-      from_user: identity,
-      item_id: item.id,
-    })
+    const url = import.meta.env.VITE_SUPABASE_URL
+    const key = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-    if (error) {
-      alert('Supabase error: ' + error.message + ' | code: ' + error.code)
+    if (!url || !key) {
+      alert('Missing env vars!\nURL: ' + url + '\nKEY: ' + (key ? 'present' : 'missing'))
+      return
+    }
+
+    try {
+      const res = await fetch(`${url}/rest/v1/events`, {
+        method: 'POST',
+        headers: {
+          'apikey': key,
+          'Authorization': `Bearer ${key}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal',
+        },
+        body: JSON.stringify({ from_user: identity, item_id: item.id }),
+      })
+      if (!res.ok) {
+        const text = await res.text()
+        alert(`Insert failed (${res.status}):\n${text}\n\nURL used: ${url}`)
+      }
+    } catch (e) {
+      alert('Network error: ' + e.message + '\n\nURL: ' + url)
     }
   }
 
