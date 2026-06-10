@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
+const SUPABASE_URL = 'https://mkkjlklnzzymgedbbqql.supabase.co'
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtta2psa2xuenp5em1nZWRicXFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5NTQ4NDMsImV4cCI6MjA5NjUzMDg0M30.Tj4btaVX78vXZZRTcPIzpfQHDmxGaVKHEJL3ugkuz4s'
 
 const USERS = {
   hadley: { name: 'Hadley', avatar: '/hadley.png', color: '#f9a8d4' },
@@ -29,12 +29,66 @@ export default function App() {
   const [flyingItem, setFlyingItem] = useState(null)
   const [incomingMsg, setIncomingMsg] = useState(null)
   const [recentlySent, setRecentlySent] = useState(false)
-  const [debug, setDebug] = useState('starting...')
+  const [debug, setDebug] = useState('waiting...')
   const lastCheckedRef = useRef(null)
 
   const me = identity ? USERS[identity] : null
   const them = identity === 'hadley' ? USERS.justin : USERS.hadley
 
+  useEffect(() => {
+    if (!identity) return
+    lastCheckedRef.current = new Date().toISOString()
+    setDebug('polling...')
+
+    const poll = setInterval(async () => {
+      const since = lastCheckedRef.current
+      const now = new Date().toISOString()
+      try {
+        const res = await dbFetch(
+          `events?select=*&from_user=neq.${identity}&created_at=gt.${encodeURIComponent(since)}&order=created_at.asc`
+        )
+        const rows = await res.json()
+        setDebug(`${new Date().toLocaleTimeString()} | ${res.status} | ${Array.isArray(rows) ? rows.length + ' rows' : JSON.stringify(rows)}`)
+        lastCheckedRef.current = now
+        if (Array.isArray(rows)) {
+          for (const row of rows) {
+            const item = ITEMS.find(i => i.id === row.item_id)
+            if (item) triggerAnimation(item, false)
+          }
+        }
+      } catch (e) {
+        setDebug('poll error: ' + e.message)
+      }
+    }, 2000)
+
+    return () => clearInterval(poll)
+  }, [identity])
+
+  function triggerAnimation(item, fromMe) {
+    setFlyingItem({ item, fromMe, key: Date.now() })
+    if (!fromMe) {
+      setIncomingMsg(`${them.name} sent you a Cheez-It! 🧀`)
+      setTimeout(() => setIncomingMsg(null), 3000)
+    }
+    setTimeout(() => setFlyingItem(null), 1200)
+  }
+
+  async function sendItem(item) {
+    if (recentlySent) return
+    setRecentlySent(true)
+    setTimeout(() => setRecentlySent(false), 1500)
+    triggerAnimation(item, true)
+    try {
+      const res = await dbFetch('events', {
+        method: 'POST',
+        headers: { 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ from_user: identity, item_id: item.id }),
+      })
+      if (!res.ok) {
+        const text = await res.text()
+        alert(`Send failed (${res.status}): ${text}`)
+      } else {
+        set
   useEffect(() => {
     if (!identity) return
 
