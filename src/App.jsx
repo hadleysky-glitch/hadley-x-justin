@@ -88,62 +88,7 @@ export default function App() {
         const text = await res.text()
         alert(`Send failed (${res.status}): ${text}`)
       } else {
-        set
-  useEffect(() => {
-    if (!identity) return
-
-    lastCheckedRef.current = new Date().toISOString()
-    setDebug('polling started')
-
-    const poll = setInterval(async () => {
-      const since = lastCheckedRef.current
-      const now = new Date().toISOString()
-
-      try {
-        const res = await dbFetch(
-          `events?select=*&from_user=neq.${identity}&created_at=gt.${encodeURIComponent(since)}&order=created_at.asc`
-        )
-        const rows = await res.json()
-        setDebug(`${new Date().toLocaleTimeString()} | status:${res.status} | rows:${Array.isArray(rows) ? rows.length : JSON.stringify(rows)}`)
-        lastCheckedRef.current = now
-        if (Array.isArray(rows)) {
-          for (const row of rows) {
-            const item = ITEMS.find(i => i.id === row.item_id)
-            if (item) triggerAnimation(item, false)
-          }
-        }
-      } catch (e) {
-        setDebug('error: ' + e.message)
-      }
-    }, 2000)
-
-    return () => clearInterval(poll)
-  }, [identity])
-
-  function triggerAnimation(item, fromMe) {
-    setFlyingItem({ item, fromMe, key: Date.now() })
-    if (!fromMe) {
-      setIncomingMsg(`${them.name} sent you a Cheez-It! 🧀`)
-      setTimeout(() => setIncomingMsg(null), 3000)
-    }
-    setTimeout(() => setFlyingItem(null), 1200)
-  }
-
-  async function sendItem(item) {
-    if (recentlySent) return
-    setRecentlySent(true)
-    setTimeout(() => setRecentlySent(false), 1500)
-    triggerAnimation(item, true)
-
-    try {
-      const res = await dbFetch('events', {
-        method: 'POST',
-        headers: { 'Prefer': 'return=minimal' },
-        body: JSON.stringify({ from_user: identity, item_id: item.id }),
-      })
-      if (!res.ok) {
-        const text = await res.text()
-        alert(`Send failed (${res.status}): ${text}`)
+        setDebug('sent! waiting for poll...')
       }
     } catch (e) {
       alert('Network error: ' + e.message)
@@ -226,7 +171,7 @@ export default function App() {
       <p className="footer-note">
         {recentlySent ? '✈️ sent!' : `tap to throw something at ${them.name}`}
       </p>
-      <p style={{ fontSize: '0.7rem', color: '#aaa', marginTop: '0.25rem', padding: '0 1rem', textAlign: 'center' }}>
+      <p style={{ fontSize: '0.7rem', color: '#aaa', marginTop: '0.25rem', padding: '0 1rem', textAlign: 'center', wordBreak: 'break-all' }}>
         {debug}
       </p>
     </div>
