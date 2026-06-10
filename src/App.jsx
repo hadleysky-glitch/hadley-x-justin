@@ -158,3 +158,64 @@ export default function App() {
       </header>
       <div className="stage">
         <div className="avatar-panel me">
+          <div className="avatar-wrap">
+            {gifOverlay?.side === 'me' && gifOverlay.text && (
+              <div className="speech-bubble">{gifOverlay.text}</div>
+            )}
+            <img src={me.avatar} alt={me.name} className="avatar" />
+            {gifOverlay?.side === 'me' && (
+              <img key={gifOverlay.key} src={gifOverlay.src} className="gif-overlay" alt="reaction" />
+            )}
+            <div className="name-tag" style={{ background: me.color }}>{me.name}</div>
+          </div>
+          <div className="send-area">
+            {ITEMS.map(item => (
+              <button
+                key={item.id}
+                className={`send-btn ${recentlySent ? 'sent' : ''}`}
+                onClick={() => sendItem(item)}
+                disabled={recentlySent}
+              >
+                {item.image
+                  ? <img src={item.image} alt={item.label} className="item-img" />
+                  : <span className="item-emoji">{item.emoji}</span>
+                }
+                <span>send {item.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+        {flyingItem && (
+          <div key={flyingItem.key} className={`flying-item ${flyingItem.fromMe ? 'fly-right' : 'fly-left'}`}>
+            <img src={flyingItem.item.image} alt={flyingItem.item.label} />
+          </div>
+        )}
+        <div className="avatar-panel them">
+          <div className="avatar-wrap">
+            {gifOverlay?.side === 'them' && gifOverlay.text && (
+              <div className="speech-bubble">{gifOverlay.text}</div>
+            )}
+            <img src={them.avatar} alt={them.name} className="avatar" />
+            {gifOverlay?.side === 'them' && (
+              <img key={gifOverlay.key} src={gifOverlay.src} className="gif-overlay" alt="reaction" />
+            )}
+            <div className="name-tag" style={{ background: them.color }}>{them.name}</div>
+          </div>
+          {incomingMsg && <div className="incoming-msg">{incomingMsg}</div>}
+          {pendingReceived.map(p => (
+            <button key={p.key} className="pending-notification" onClick={() => handleOpenReceived(p)}>
+              {them.name} sent you a {p.item.label}
+              <span className="tap-hint">tap to see ✨</span>
+            </button>
+          ))}
+        </div>
+      </div>
+      <p className="footer-note">
+        {recentlySent ? '✈️ sent!' : `tap to throw something at ${them.name}`}
+      </p>
+      <p style={{ fontSize: '0.7rem', color: '#aaa', marginTop: '0.25rem', padding: '0 1rem', textAlign: 'center', wordBreak: 'break-all' }}>
+        {debug}
+      </p>
+    </div>
+  )
+}
