@@ -9,8 +9,9 @@ const USERS = {
 }
 
 const ITEMS = [
-  { id: 'cheezit', label: 'Cheez-It', image: '/cheezit.png', type: 'flying' },
-  { id: 'heart',   label: 'heart ❤️', image: '/heart.png',   type: 'reaction', actionDuration: 3000, reactionDuration: 3000 },
+  { id: 'cheezit', label: 'Cheez-It',  image: '/cheezit.png', type: 'flying' },
+  { id: 'heart',   label: 'heart ❤️',  image: '/heart.png',   type: 'reaction', actionDuration: 3000, reactionDuration: 3000 },
+  { id: 'hi',      label: 'say hi 👋', image: null, emoji: '👋', type: 'reaction', actionDuration: 3000, reactionDuration: 3000, reactionSameAsAction: true, speechBubble: 'hi! 👋' },
 ]
 
 function dbFetch(path, options = {}) {
@@ -79,9 +80,9 @@ export default function App() {
     setTimeout(() => setFlyingItem(null), 1200)
   }
 
-  function showGif(src, side, duration) {
+  function showGif(src, side, duration, text = null) {
     const key = Date.now()
-    setGifOverlay({ src, side, key })
+    setGifOverlay({ src, side, key, text })
     setTimeout(() => {
       setGifOverlay(prev => prev?.key === key ? null : prev)
     }, duration)
@@ -89,9 +90,12 @@ export default function App() {
 
   function handleOpenReceived(pending) {
     setPendingReceived(prev => prev.filter(p => p.key !== pending.key))
-    showGif(`/${pending.fromUser}-${pending.item.id}.gif`, 'them', pending.item.actionDuration)
+    const reactionSrc = pending.item.reactionSameAsAction
+      ? `/${identity}-${pending.item.id}.gif`
+      : `/${identity}-${pending.item.id}-reaction.gif`
+    showGif(`/${pending.fromUser}-${pending.item.id}.gif`, 'them', pending.item.actionDuration, pending.item.speechBubble || null)
     setTimeout(() => {
-      showGif(`/${identity}-${pending.item.id}-reaction.gif`, 'me', pending.item.reactionDuration)
+      showGif(reactionSrc, 'me', pending.item.reactionDuration, pending.item.speechBubble || null)
     }, pending.item.actionDuration + 300)
   }
 
@@ -104,7 +108,7 @@ export default function App() {
       setFlyingItem({ item, fromMe: true, key: Date.now() })
       setTimeout(() => setFlyingItem(null), 1200)
     } else if (item.type === 'reaction') {
-      showGif(`/${identity}-${item.id}.gif`, 'me', item.actionDuration)
+      showGif(`/${identity}-${item.id}.gif`, 'me', item.actionDuration, item.speechBubble || null)
     }
 
     try {
@@ -159,6 +163,9 @@ export default function App() {
       <div className="stage">
         <div className="avatar-panel me">
           <div className="avatar-wrap">
+            {gifOverlay?.side === 'me' && gifOverlay.text && (
+              <div className="speech-bubble">{gifOverlay.text}</div>
+            )}
             <img src={me.avatar} alt={me.name} className="avatar" />
             {gifOverlay?.side === 'me' && (
               <img key={gifOverlay.key} src={gifOverlay.src} className="gif-overlay" alt="reaction" />
@@ -173,7 +180,10 @@ export default function App() {
                 onClick={() => sendItem(item)}
                 disabled={recentlySent}
               >
-                <img src={item.image} alt={item.label} className="item-img" />
+                {item.image
+                  ? <img src={item.image} alt={item.label} className="item-img" />
+                  : <span className="item-emoji">{item.emoji}</span>
+                }
                 <span>send {item.label}</span>
               </button>
             ))}
@@ -191,6 +201,9 @@ export default function App() {
 
         <div className="avatar-panel them">
           <div className="avatar-wrap">
+            {gifOverlay?.side === 'them' && gifOverlay.text && (
+              <div className="speech-bubble">{gifOverlay.text}</div>
+            )}
             <img src={them.avatar} alt={them.name} className="avatar" />
             {gifOverlay?.side === 'them' && (
               <img key={gifOverlay.key} src={gifOverlay.src} className="gif-overlay" alt="reaction" />
