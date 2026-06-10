@@ -248,10 +248,11 @@ body {
 /* â”€â”€ GIF overlay â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .gif-overlay {
   position: absolute;
-  width: 160px;
-  height: 160px;
-  object-fit: contain;
-  top: -20px;
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 50%;
+  top: 0;
   left: 50%;
   transform: translateX(-50%);
   z-index: 20;
