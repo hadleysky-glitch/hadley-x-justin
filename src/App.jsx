@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 
-const SUPABASE_URL = 'https://mkkjlklnzzymgedbbqql.supabase.co'
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtta2psa2xuenp5em1nZWRicXFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5NTQ4NDMsImV4cCI6MjA5NjUzMDg0M30.Tj4btaVX78vXZZRTcPIzpfQHDmxGaVKHEJL3ugkuz4s'
+const SUPABASE_URL = 'https://lnvbzvxmshqqwllhxvjt.supabase.co'
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxudmJ6dnhtc2hxcXdsbGh4dmp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwNDgwNTYsImV4cCI6MjA5NjYyNDA1Nn0.pzF4EqRMPL7qGvW0kTkQeXkar4mhDpbvtN-hR4fXJDI'
 
 const USERS = {
   hadley: { name: 'Hadley', avatar: '/hadley.png', color: '#f9a8d4' },
