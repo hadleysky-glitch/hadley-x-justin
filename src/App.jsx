@@ -9,10 +9,10 @@ const USERS = {
 }
 
 const ITEMS = [
-  { id: 'cheezit', label: 'Cheez-It',  image: '/cheezit.png', type: 'flying' },
-  { id: 'heart',   label: 'heart ❤️',  image: '/heart.png',   type: 'reaction', actionDuration: 3000, reactionDuration: 3000 },
-  { id: 'hi',      label: 'say hi 👋', image: null, emoji: '👋', type: 'reaction', actionDuration: 3000, reactionDuration: 3000, reactionSameAsAction: true, speechBubble: 'hi! 👋' },
-  { id: 'chicken-sandwich', label: 'chicken sandwich 🍗', image: '/chicken-sandwich.png', type: 'reaction', actionDuration: 3000, reactionDuration: 3000, reactionSameAsAction: true },
+  { id: 'cheezit', label: 'Cheez-It', image: '/cheezit.png', type: 'flying' },
+  { id: 'heart', label: 'heart ❤️', image: '/heart.png', type: 'reaction', actionDuration: 3000, reactionDuration: 3000 },
+  { id: 'hi', label: 'say hi 👋', image: null, emoji: '👋', type: 'reaction', actionDuration: 3000, reactionDuration: 3000, reactionSameAsAction: true, speechBubble: 'hi! 👋' },
+  { id: 'chicken-sandwich', label: 'chicken sandwich 🍗', image: '/chicken-sandwich.png', type: 'flying' },
 ]
 
 function dbFetch(path, options = {}) {
@@ -74,7 +74,7 @@ export default function App() {
 
   function triggerFlyAnimation(item) {
     setFlyingItem({ item, fromMe: false, key: Date.now() })
-    setIncomingMsg(`${them.name} sent you a Cheez-It! 🧀`)
+    setIncomingMsg(`${them.name} sent you a ${item.label}!`)
     setTimeout(() => setIncomingMsg(null), 3000)
     setTimeout(() => setFlyingItem(null), 1200)
   }
@@ -89,13 +89,7 @@ export default function App() {
 
   function handleOpenReceived(pending) {
     setPendingReceived(prev => prev.filter(p => p.key !== pending.key))
-    const reactionSrc = pending.item.reactionSameAsAction
-      ? `/${identity}-${pending.item.id}.gif`
-      : `/${identity}-${pending.item.id}-reaction.gif`
-    showGif(`/${pending.fromUser}-${pending.item.id}.gif`, 'them', pending.item.actionDuration, pending.item.speechBubble || null)
-    setTimeout(() => {
-      showGif(reactionSrc, 'me', pending.item.reactionDuration, pending.item.speechBubble || null)
-    }, pending.item.actionDuration + 300)
+    showGif(`/${identity}-${pending.item.id}.gif`, 'me', pending.item.reactionDuration, pending.item.speechBubble || null)
   }
 
   async function sendItem(item) {
@@ -105,8 +99,6 @@ export default function App() {
     if (item.type === 'flying') {
       setFlyingItem({ item, fromMe: true, key: Date.now() })
       setTimeout(() => setFlyingItem(null), 1200)
-    } else if (item.type === 'reaction') {
-      showGif(`/${identity}-${item.id}.gif`, 'me', item.actionDuration, item.speechBubble || null)
     }
     try {
       const res = await dbFetch('events', {
