@@ -8,11 +8,13 @@ const USERS = {
   justin: { name: 'Justin', avatar: '/justin.png', color: '#93c5fd' },
 }
 
+// type: 'flying' — item flies across + receiver taps to see their reaction GIF
+// type: 'mutual' — receiver taps to see sender's GIF, then their own GIF
 const ITEMS = [
-  { id: 'cheezit', label: 'Cheez-It', image: '/cheezit.png', type: 'flying' },
-  { id: 'heart', label: 'heart ❤️', image: '/heart.png', type: 'reaction', actionDuration: 3000, reactionDuration: 3000 },
-  { id: 'hi', label: 'say hi 👋', image: null, emoji: '👋', type: 'reaction', actionDuration: 3000, reactionDuration: 3000, reactionSameAsAction: true, speechBubble: 'hi! 👋' },
-  { id: 'chicken-sandwich', label: 'chicken sandwich 🍗', image: '/chicken-sandwich.png', type: 'flying' },
+  { id: 'cheezit',          label: 'Cheez-It',            image: '/cheezit.png',          type: 'flying' },
+  { id: 'chicken-sandwich', label: 'chicken sandwich 🍗', image: '/chicken-sandwich.png', type: 'flying', reactionDuration: 3000 },
+  { id: 'heart',            label: 'heart ❤️',            image: '/heart.png',            type: 'mutual', actionDuration: 3000, reactionDuration: 3000 },
+  { id: 'hi',               label: 'say hi 👋',           image: null, emoji: '👋',       type: 'mutual', actionDuration: 3000, reactionDuration: 3000, speechBubble: 'hi! 👋' },
 ]
 
 function dbFetch(path, options = {}) {
@@ -59,7 +61,13 @@ export default function App() {
             const item = ITEMS.find(i => i.id === row.item_id)
             if (!item) continue
             if (item.type === 'flying') {
-              triggerFlyAnimation(item)
+              setFlyingItem({ item, fromMe: false, key: Date.now() })
+              setIncomingMsg(`${them.name} sent you a ${item.label}!`)
+              setTimeout(() => setIncomingMsg(null), 3000)
+              setTimeout(() => setFlyingItem(null), 1200)
+              if (item.reactionDuration) {
+                setPendingReceived(prev => [...prev, { key: row.id, item, fromUser: row.from_user }])
+              }
             } else {
               setPendingReceived(prev => [...prev, { key: row.id, item, fromUser: row.from_user }])
             }
@@ -72,13 +80,6 @@ export default function App() {
     return () => clearInterval(poll)
   }, [identity])
 
-  function triggerFlyAnimation(item) {
-    setFlyingItem({ item, fromMe: false, key: Date.now() })
-    setIncomingMsg(`${them.name} sent you a ${item.label}!`)
-    setTimeout(() => setIncomingMsg(null), 3000)
-    setTimeout(() => setFlyingItem(null), 1200)
-  }
-
   function showGif(src, side, duration, text = null) {
     const key = Date.now()
     setGifOverlay({ src, side, key, text })
@@ -89,7 +90,14 @@ export default function App() {
 
   function handleOpenReceived(pending) {
     setPendingReceived(prev => prev.filter(p => p.key !== pending.key))
-    showGif(`/${identity}-${pending.item.id}.gif`, 'me', pending.item.reactionDuration, pending.item.speechBubble || null)
+    if (pending.item.type === 'mutual') {
+      showGif(`/${pending.fromUser}-${pending.item.id}.gif`, 'them', pending.item.actionDuration, pending.item.speechBubble || null)
+      setTimeout(() => {
+        showGif(`/${identity}-${pending.item.id}.gif`, 'me', pending.item.reactionDuration, pending.item.speechBubble || null)
+      }, pending.item.actionDuration + 300)
+    } else {
+      showGif(`/${identity}-${pending.item.id}.gif`, 'me', pending.item.reactionDuration, null)
+    }
   }
 
   async function sendItem(item) {
