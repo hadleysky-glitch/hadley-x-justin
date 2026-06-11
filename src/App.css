@@ -326,12 +326,13 @@ body {
 /* ── GIF overlay ─────────────────────── */
 .gif-overlay {
   position: absolute;
-  width: 160px;
-  height: 160px;
-  object-fit: contain;
-  top: -20px;
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  top: 0;
   left: 50%;
   transform: translateX(-50%);
+  border-radius: 50%;
   z-index: 20;
   animation: popIn 0.3s ease;
 }
