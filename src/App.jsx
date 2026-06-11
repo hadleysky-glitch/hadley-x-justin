@@ -16,11 +16,13 @@ const ITEMS = [
   { id: 'matcha',           label: 'matcha 🍵',           image: '/matcha.png',           type: 'flying', reactionDuration: 3000,        category: 'food' },
   { id: 'heart',            label: 'heart ❤️',            image: '/heart.png',            type: 'mutual', actionDuration: 3000, reactionDuration: 3000, category: 'greetings' },
   { id: 'hi',               label: 'say hi 👋',           image: null, emoji: '👋',       type: 'mutual', actionDuration: 3000, reactionDuration: 3000, speechBubble: 'hi! 👋', category: 'greetings' },
+  { id: 'raccoon',          label: 'raccoon 🦝',          image: '/raccoon.png',          type: 'flying', reactionDuration: 3000,        category: 'gifts' },
 ]
 
 const CATEGORIES = [
   { id: 'food',      label: '🍔 food' },
   { id: 'greetings', label: '👋 greetings' },
+  { id: 'gifts',     label: '🎁 gifts' },
 ]
 
 function dbFetch(path, options = {}) {
@@ -42,7 +44,7 @@ export default function App() {
   const [pendingReceived, setPendingReceived] = useState([])
   const [gifOverlay, setGifOverlay] = useState(null)
   const [recentlySent, setRecentlySent] = useState(false)
-  const [openCategories, setOpenCategories] = useState({ food: true, greetings: true })
+  const [openCategories, setOpenCategories] = useState({ food: true, greetings: true, gifts: true })
   const [debug, setDebug] = useState('waiting...')
   const lastCheckedRef = useRef(null)
 
