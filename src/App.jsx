@@ -11,10 +11,16 @@ const USERS = {
 // type: 'flying' — item flies across + receiver taps to see their reaction GIF
 // type: 'mutual' — receiver taps to see sender's GIF, then their own GIF
 const ITEMS = [
-  { id: 'cheezit',          label: 'Cheez-It',            image: '/cheezit.png',          type: 'flying' },
-  { id: 'chicken-sandwich', label: 'chicken sandwich 🍗', image: '/chicken-sandwich.png', type: 'flying', reactionDuration: 3000 },
-  { id: 'heart',            label: 'heart ❤️',            image: '/heart.png',            type: 'mutual', actionDuration: 3000, reactionDuration: 3000 },
-  { id: 'hi',               label: 'say hi 👋',           image: null, emoji: '👋',       type: 'mutual', actionDuration: 3000, reactionDuration: 3000, speechBubble: 'hi! 👋' },
+  { id: 'cheezit',          label: 'Cheez-It',            image: '/cheezit.png',          type: 'flying',                                category: 'food' },
+  { id: 'chicken-sandwich', label: 'chicken sandwich 🍗', image: '/chicken-sandwich.png', type: 'flying', reactionDuration: 3000,        category: 'food' },
+  { id: 'matcha',           label: 'matcha 🍵',           image: '/matcha.png',           type: 'flying', reactionDuration: 3000,        category: 'food' },
+  { id: 'heart',            label: 'heart ❤️',            image: '/heart.png',            type: 'mutual', actionDuration: 3000, reactionDuration: 3000, category: 'greetings' },
+  { id: 'hi',               label: 'say hi 👋',           image: null, emoji: '👋',       type: 'mutual', actionDuration: 3000, reactionDuration: 3000, speechBubble: 'hi! 👋', category: 'greetings' },
+]
+
+const CATEGORIES = [
+  { id: 'food',      label: '🍔 food' },
+  { id: 'greetings', label: '👋 greetings' },
 ]
 
 function dbFetch(path, options = {}) {
@@ -35,6 +41,207 @@ export default function App() {
   const [incomingMsg, setIncomingMsg] = useState(null)
   const [pendingReceived, setPendingReceived] = useState([])
   const [gifOverlay, setGifOverlay] = useState(null)
+  const [recentlySent, setRecentlySent] = useState(false)
+  const [openCategories, setOpenCategories] = useState({ food: true, greetings: true })
+  const [debug, setDebug] = useState('waiting...')
+  const lastCheckedRef = useRef(null)
+
+  const me = identity ? USERS[identity] : null
+  const them = identity === 'hadley' ? USERS.justin : USERS.hadley
+
+  function toggleCategory(id) {
+    setOpenCategories(prev => ({ ...prev, [id]: !prev[id] }))
+  }
+
+  useEffect(() => {
+    if (!identity) return
+    lastCheckedRef.current = new Date().toISOString()
+    setDebug('polling...')
+    const poll = setInterval(async () => {
+      const since = lastCheckedRef.current
+      const now = new Date().toISOString()
+      try {
+        const res = await dbFetch(
+          `events?select=*&from_user=neq.${identity}&created_at=gt.${encodeURIComponent(since)}&order=created_at.asc`
+        )
+        const rows = await res.json()
+        setDebug(`${new Date().toLocaleTimeString()} | ${res.status} | ${Array.isArray(rows) ? rows.length + ' rows' : JSON.stringify(rows)}`)
+        lastCheckedRef.current = now
+        if (Array.isArray(rows)) {
+          for (const row of rows) {
+            const item = ITEMS.find(i => i.id === row.item_id)
+            if (!item) continue
+            if (item.type === 'flying') {
+              setFlyingItem({ item, fromMe: false, key: Date.now() })
+              setIncomingMsg(`${them.name} sent you a ${item.label}!`)
+              setTimeout(() => setIncomingMsg(null), 3000)
+              setTimeout(() => setFlyingItem(null), 1200)
+              if (item.reactionDuration) {
+                setPendingReceived(prev => [...prev, { key: row.id, item, fromUser: row.from_user }])
+              }
+            } else {
+              setPendingReceived(prev => [...prev, { key: row.id, item, fromUser: row.from_user }])
+            }
+          }
+        }
+      } catch (e) {
+        setDebug('poll error: ' + e.message)
+      }
+    }, 2000)
+    return () => clearInterval(poll)
+  }, [identity])
+
+  function showGif(src, side, duration, text = null) {
+    const key = Date.now()
+    setGifOverlay({ src, side, key, text })
+    setTimeout(() => {
+      setGifOverlay(prev => prev?.key === key ? null : prev)
+    }, duration)
+  }
+
+  function handleOpenReceived(pending) {
+    setPendingReceived(prev => prev.filter(p => p.key !== pending.key))
+    if (pending.item.type === 'mutual') {
+      showGif(`/${pending.fromUser}-${pending.item.id}.gif`, 'them', pending.item.actionDuration, pending.item.speechBubble || null)
+      setTimeout(() => {
+        showGif(`/${identity}-${pending.item.id}.gif`, 'me', pending.item.reactionDuration, pending.item.speechBubble || null)
+      }, pending.item.actionDuration + 300)
+    } else {
+      showGif(`/${identity}-${pending.item.id}.gif`, 'me', pending.item.reactionDuration, null)
+    }
+  }
+
+  async function sendItem(item) {
+    if (recentlySent) return
+    setRecentlySent(true)
+    setTimeout(() => setRecentlySent(false), 1500)
+    if (item.type === 'flying') {
+      setFlyingItem({ item, fromMe: true, key: Date.now() })
+      setTimeout(() => setFlyingItem(null), 1200)
+    }
+    try {
+      const res = await dbFetch('events', {
+        method: 'POST',
+        headers: { 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ from_user: identity, item_id: item.id }),
+      })
+      if (!res.ok) {
+        const text = await res.text()
+        alert(`Send failed (${res.status}): ${text}`)
+      } else {
+        setDebug('sent! waiting for poll...')
+      }
+    } catch (e) {
+      alert('Network error: ' + e.message)
+    }
+  }
+
+  function chooseIdentity(id) {
+    localStorage.setItem('hjx_identity', id)
+    setIdentity(id)
+  }
+
+  if (!identity) {
+    return (
+      <div className="picker-screen">
+        <h1>who are you? 🥹</h1>
+        <div className="picker-buttons">
+          <button className="picker-btn hadley" onClick={() => chooseIdentity('hadley')}>
+            <img src={USERS.hadley.avatar} alt="Hadley" />
+            <span>Hadley</span>
+          </button>
+          <button className="picker-btn justin" onClick={() => chooseIdentity('justin')}>
+            <img src={USERS.justin.avatar} alt="Justin" />
+            <span>Justin</span>
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="app">
+      <header className="top-bar">
+        <span className="title">hadley × justin</span>
+        <button className="switch-btn" onClick={() => { localStorage.removeItem('hjx_identity'); setIdentity(null) }}>
+          switch
+        </button>
+      </header>
+      <div className="stage">
+        <div className="avatar-panel me">
+          <div className="avatar-wrap">
+            {gifOverlay?.side === 'me' && gifOverlay.text && (
+              <div className="speech-bubble">{gifOverlay.text}</div>
+            )}
+            <img src={me.avatar} alt={me.name} className="avatar" />
+            {gifOverlay?.side === 'me' && (
+              <img key={gifOverlay.key} src={gifOverlay.src} className="gif-overlay" alt="reaction" />
+            )}
+            <div className="name-tag" style={{ background: me.color }}>{me.name}</div>
+          </div>
+          <div className="send-area">
+            {CATEGORIES.map(cat => (
+              <div key={cat.id} className="category">
+                <button className="category-header" onClick={() => toggleCategory(cat.id)}>
+                  <span>{cat.label}</span>
+                  <span className="category-arrow">{openCategories[cat.id] ? '▲' : '▼'}</span>
+                </button>
+                {openCategories[cat.id] && (
+                  <div className="category-items">
+                    {ITEMS.filter(item => item.category === cat.id).map(item => (
+                      <button
+                        key={item.id}
+                        className={`send-btn ${recentlySent ? 'sent' : ''}`}
+                        onClick={() => sendItem(item)}
+                        disabled={recentlySent}
+                      >
+                        {item.image
+                          ? <img src={item.image} alt={item.label} className="item-img" />
+                          : <span className="item-emoji">{item.emoji}</span>
+                        }
+                        <span>send {item.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+        {flyingItem && (
+          <div key={flyingItem.key} className={`flying-item ${flyingItem.fromMe ? 'fly-right' : 'fly-left'}`}>
+            <img src={flyingItem.item.image} alt={flyingItem.item.label} />
+          </div>
+        )}
+        <div className="avatar-panel them">
+          <div className="avatar-wrap">
+            {gifOverlay?.side === 'them' && gifOverlay.text && (
+              <div className="speech-bubble">{gifOverlay.text}</div>
+            )}
+            <img src={them.avatar} alt={them.name} className="avatar" />
+            {gifOverlay?.side === 'them' && (
+              <img key={gifOverlay.key} src={gifOverlay.src} className="gif-overlay" alt="reaction" />
+            )}
+            <div className="name-tag" style={{ background: them.color }}>{them.name}</div>
+          </div>
+          {incomingMsg && <div className="incoming-msg">{incomingMsg}</div>}
+          {pendingReceived.map(p => (
+            <button key={p.key} className="pending-notification" onClick={() => handleOpenReceived(p)}>
+              {them.name} sent you a {p.item.label}
+              <span className="tap-hint">tap to see ✨</span>
+            </button>
+          ))}
+        </div>
+      </div>
+      <p className="footer-note">
+        {recentlySent ? '✈️ sent!' : `tap to throw something at ${them.name}`}
+      </p>
+      <p style={{ fontSize: '0.7rem', color: '#aaa', marginTop: '0.25rem', padding: '0 1rem', textAlign: 'center', wordBreak: 'break-all' }}>
+        {debug}
+      </p>
+    </div>
+  )
+}  const [gifOverlay, setGifOverlay] = useState(null)
   const [recentlySent, setRecentlySent] = useState(false)
   const [debug, setDebug] = useState('waiting...')
   const lastCheckedRef = useRef(null)
