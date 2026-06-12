@@ -14,9 +14,11 @@ const ITEMS = [
   { id: 'cheezit',          label: 'Cheez-It',            image: '/cheezit.png',          type: 'flying',                                category: 'food' },
   { id: 'chicken-sandwich', label: 'chicken sandwich 🍗', image: '/chicken-sandwich.png', type: 'flying', reactionDuration: 3000,        category: 'food' },
   { id: 'matcha',           label: 'matcha 🍵',           image: '/matcha.png',           type: 'flying', reactionDuration: 3000,        category: 'food' },
+  { id: 'pasta',            label: 'pasta 🍝',            image: '/pasta.png',            type: 'flying', reactionDuration: 3000,        category: 'food' },
   { id: 'heart',            label: 'heart ❤️',            image: '/heart.png',            type: 'mutual', actionDuration: 3000, reactionDuration: 3000, category: 'greetings' },
   { id: 'hi',               label: 'say hi 👋',           image: null, emoji: '👋',       type: 'mutual', actionDuration: 3000, reactionDuration: 3000, speechBubble: 'hi! 👋', category: 'greetings' },
   { id: 'raccoon',          label: 'raccoon 🦝',          image: '/raccoon.png',          type: 'flying', reactionDuration: 3000,        category: 'gifts' },
+  { id: 'flower',           label: 'flower 🌸',           image: '/flower.png',           type: 'flying', reactionDuration: 3000,        category: 'gifts' },
 ]
 
 const CATEGORIES = [
